@@ -200,7 +200,7 @@ def active_learning(dataset, model, config, path, base, samples, batch, n):
     # pipeline(dataset, model(**config), diversity_sampling, path, 'diversity', base, samples, batch, n)
     # pipeline(dataset, model(**config), density_sampling, path, 'density', base, samples, batch, n)
     # pipeline(dataset, model(**config), minimize_expected_risk, path, 'min_exp_risk', base, samples, batch, n)
-
+    plt.title('xgboost')
     plt.tight_layout()
     plt.savefig(os.path.join(path, 'result.png'))
     plt.close()

@@ -18,7 +18,7 @@ def replot(path, start, end):
 
 
 if __name__ == '__main__':
-    root = 'outputs/SILVA_138_3_8_sliding_0/xgboost'
+    root = 'outputs/SILVA_138_3_8_sliding_0/pair'
     start = 0
     end = -1
     replot(root, start, end)

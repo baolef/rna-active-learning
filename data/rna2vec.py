@@ -1,5 +1,4 @@
-# Created by Baole Fang at 10/30/23
-
+# Created by Baole Fang at 11/13/23
 import argparse
 import os
 
@@ -28,10 +27,9 @@ def dna2vec(seq):
 
 def main():
     seqs = [record.seq for record in records]
-    Y = [record.description.split()[1] for record in records]
     with multiprocessing.Pool(os.cpu_count()) as p:
         X = list(tqdm(p.imap(dna2vec, seqs), total=len(seqs)))
-    np.savez(path, X=X, Y=Y)
+    np.save(path, X)
 
 
 if __name__ == '__main__':
@@ -46,6 +44,7 @@ if __name__ == '__main__':
                         choices=['disjoint', 'sliding'], default='sliding')
     parser.add_argument('-o', '--output', help='output path', type=str, default='inputs')
     parser.add_argument('-s', '--seed', help='random seed', type=int, default=0)
+
     args = parser.parse_args()
 
     model = MultiKModel(args.model)
@@ -64,5 +63,8 @@ if __name__ == '__main__':
     records = list(SeqIO.parse(args.input, args.type))
     rng = np.random.RandomState(args.seed)
     name = os.path.basename(args.input).split('.')[0]
-    path = os.path.join(args.output, f'{name}_{args.low}_{args.up}_{args.fragment}_{args.seed}_pair.npz')
+    root = os.path.join(args.output, f'{name}_{args.low}_{args.up}_{args.fragment}_{args.seed}')
+    path = os.path.join(root, 'X.npy')
+    if not os.path.exists(root):
+        os.makedirs(root)
     main()

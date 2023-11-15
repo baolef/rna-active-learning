@@ -14,9 +14,8 @@ from learning import active_learning
 
 
 def load(path: str, percentage: int):
-    data = np.load(path)
-    X = data['X']
-    Y = data['Y']
+    X = np.load(os.path.join(path, 'X.npy'))
+    Y = np.load(os.path.join(path, 'prediction.npy'))
     percentile = np.percentile(Y, percentage)
     Y = Y > percentile
     return X, Y.astype(int)
@@ -28,13 +27,17 @@ def main(args):
     X, y = load(args.input, args.percentage)
     X_train, X_test, y_train, y_test = train_test_split(X[:100000], y[:100000], test_size=args.test,
                                                         random_state=args.seed)
+    print(f'X_train: {X_train.shape} y_train: {y_train.shape}')
+    print(f'X_test: {X_test.shape} y_test: {y_test.shape}')
+    path = os.path.join(args.output, os.path.basename(args.input).split('.')[0], 'prediction', str(args.percentage))
+    print(f'Output path: {path}')
+
     model = xgboost.XGBClassifier(**config)
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
     cm = confusion_matrix(y_test, y_pred).astype(int)
     report = classification_report(y_test, y_pred)
-    path = os.path.join(args.output, os.path.basename(args.input).split('.')[0], args.model, 'prediction')
     if not os.path.exists(path):
         os.makedirs(path)
     with open(os.path.join(path, 'model.pkl'), 'wb') as f:
@@ -47,6 +50,7 @@ def main(args):
     disp = ConfusionMatrixDisplay(cm)
     disp.plot()
     plt.savefig(os.path.join(path, 'confusion.png'))
+    plt.close()
 
     active_learning([X_train, X_test, y_train, y_test], xgboost.XGBClassifier, config, path, 1000, 9000, 100, 3)
 
@@ -56,7 +60,6 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--input', help='path of the data', type=str, required=True)
     parser.add_argument('-t', '--test', help='test set size', type=float, default=0.2)
     parser.add_argument('-o', '--output', help='path of output model', type=str, default='outputs')
-    parser.add_argument('-m', '--model', help='model name', type=str, default='xgboost')
     parser.add_argument('-s', '--seed', help='random seed', type=int, default=0)
     parser.add_argument('-p', '--percentage', help='percentage of positive samples', type=int, default=50)
 

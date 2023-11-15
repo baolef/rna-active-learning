@@ -10,33 +10,36 @@ import xgboost
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from learning import active_learning
 
-
-def load(path: str, idx: int = 0):
-    data = np.load(path)
+def load(path: str, idx: int = 0, limit: int = 10000):
+    data_X = np.load(os.path.join(path, 'X.npy'))
+    data_Y = np.load(os.path.join(path, 'class.npy'))
     X = []
     Y = []
-    for x, y in zip(data['X'], data['Y']):
+    for x, y in zip(data_X, data_Y):
         ys = y.split(';')
         if idx < len(ys):
             X.append(x)
             Y.append(ys[idx])
-    return X, np.array(Y)
+    return np.array(X[:limit]), np.array(Y[:limit])
 
 
 def main(args):
+    config = {'n_jobs': os.cpu_count(), 'use_label_encoder': True, 'eval_metric': 'logloss'}
     np.set_printoptions(threshold=np.inf, linewidth=np.inf)
-    X, y = load(args.input, args.column)
-    X_train, X_test, y_train, y_test = train_test_split(X[:10000], y[:10000], test_size=args.test,
-                                                        random_state=args.seed)
-    model = xgboost.XGBClassifier(n_jobs=os.cpu_count())
+    X, y = load(args.input, args.column, args.number)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=args.test, random_state=args.seed)
+    print(f'X_train: {X_train.shape} y_train: {y_train.shape}')
+    print(f'X_test: {X_test.shape} y_test: {y_test.shape}')
+    path = os.path.join(args.output, os.path.basename(args.input).split('.')[0], 'classifier')
+    print(f'Output path: {path}')
+
+    model = xgboost.XGBClassifier(**config)
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
     cm = confusion_matrix(y_test, y_pred).astype(int)
     report = classification_report(y_test, y_pred)
-    path = os.path.join(args.output, os.path.basename(args.input).split('.')[0], args.model, 'classifier')
     if not os.path.exists(path):
         os.makedirs(path)
     with open(os.path.join(path, 'model.pkl'), 'wb') as f:
@@ -51,16 +54,14 @@ def main(args):
     disp.plot(ax=ax)
     plt.savefig(os.path.join(path, 'confusion.png'))
 
-    active_learning([X_train, X_test, y_train, y_test], xgboost.XGBClassifier, config, path, 1000, 9000, 100, 3)
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='train the classification problem')
     parser.add_argument('-i', '--input', help='path of the data', type=str, required=True)
     parser.add_argument('-c', '--column', help='column/index of label', type=int, default=0)
+    parser.add_argument('-n', '--number', help='number of samples', type=int, default=10000)
     parser.add_argument('-t', '--test', help='test set size', type=float, default=0.2)
     parser.add_argument('-o', '--output', help='path of output model', type=str, default='outputs')
-    parser.add_argument('-m', '--model', help='model name', type=str, default='xgboost')
     parser.add_argument('-s', '--seed', help='random seed', type=int, default=0)
     args = parser.parse_args()
     main(args)
